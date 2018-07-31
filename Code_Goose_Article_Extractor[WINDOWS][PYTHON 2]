@@ -1,0 +1,41 @@
+from goose import Goose
+g = Goose()
+
+import csv
+with open("Search_Results.csv","r") as csvfile:
+	read = csv.reader(csvfile)
+	data_list = []
+	for data in read:
+		data_list.append(data)
+
+i = 1
+for data in data_list:
+
+	url = data[2]
+	try:	
+		article = g.extract(url=url)
+
+		text_1 = article.cleaned_text
+		text_1 = text_1.encode("utf-8")
+
+		text_2 = article.meta_description 
+		text_2 = text_2.encode("utf-8")
+
+		if len(text_1) < len(text_2):
+			text = text_2
+		else:
+			text = text_1
+
+		if (len(text) < 300):
+			text = "INSUFFICIENT"
+	except:
+		text = "NOT AVAILABLE"
+
+	i = i+1
+	print i	
+	data.append(text)
+
+with open("Article_Results.csv","w") as csvfile:
+	row = csv.writer(csvfile)
+	for data in data_list:
+		row.writerow(["%s"%data[0], "%s"%data[1], "%s"%data[2], "%s"%data[3], "%s"%data[4], "%s"%data[5]])
