@@ -1,0 +1,200 @@
+##############################################---REFINING_DATA---###########################################################  
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.tokenize import RegexpTokenizer
+from nltk.stem.porter import PorterStemmer 
+
+stop_words = set(stopwords.words("english"))
+
+
+import csv 
+with open('Article_Results.csv', 'r') as csvfile:
+    reader = csv.reader(csvfile)
+    data_list = []
+    for data in reader:
+        data_list.append(data)
+
+def is_int(s):
+    try: 
+        int(s)
+        return True
+    except ValueError:
+        return False
+
+
+token = RegexpTokenizer(r'\w+') 
+r=[]
+for i in range(len(data_list)):
+    try:
+        txt = data_list[i][5].decode("utf-8")
+        words = token.tokenize(txt)
+
+        filtered = []
+        for w in words:
+            if w not in stop_words:
+                if w != ' ':   #Spaces gone
+                    if not is_int(w): #Removes numbers
+                        w = w.lower()
+                        filtered.append(w)  #stopwords
+
+        words_2 = filtered 
+        words_3 = []
+
+        for w in words_2:
+            letters = list(w)
+            new_letters = []
+            for l in letters:
+                if l in 'abcdefghijklmnopqrstuvwxyz0123456789':
+                    new_letters.append(l)
+            
+            if "0" in new_letters:
+                continue
+            elif "1" in new_letters:
+                continue
+            elif "2" in new_letters:
+                continue
+            elif "3" in new_letters:
+                continue
+            elif "4" in new_letters:
+                continue
+            elif "5" in new_letters:
+                continue
+            elif "6" in new_letters:
+                continue
+            elif "7" in new_letters:
+                continue
+            elif "8" in new_letters:
+                continue
+            elif "9" in new_letters:
+                continue
+            else:
+                w = ''.join(new_letters)
+                words_3.append(w) 
+        
+        text = ' '.join(words_3)
+        
+        data_list[i][5] = text.encode("ascii")
+        
+    except:
+        r.append(i)
+
+
+from langdetect import detect 
+new_data = []
+reject = []
+
+porter = PorterStemmer()
+for data in data_list:
+    x = detect(data[5])
+    x = x.encode("utf-8")
+    
+    if x == 'en':
+        new_data.append(data)
+        txt = data[5].decode("utf-8")
+        words = token.tokenize(data[5])
+
+        stemmed = []        
+        for w in words:
+            new = porter.stem(w)
+            stemmed.append(new)
+
+        text = ' '.join(stemmed)
+
+        data[5] = text.encode("ascii")
+    else: 
+        reject.append(data)
+
+##############################################---DOCUMENT_MATRIX---###########################################################  
+
+from nltk.corpus import wordnet
+
+new_words = []
+
+for data in new_data:
+    text = data[5]
+    words = token.tokenize(text)
+    
+    new_word = []
+    for i in range(len(words) - 1):
+        new_word.append("%s_%s"%(words[i], words[i+1]))
+    
+    new_words.append(new_word)
+        
+
+themes = []
+test_words = ['apartments', 'houses', 'hotels', 'hostels', 'bed_and_breakfast', 'homestays', 'boats', 'campsites', 'cruises', 'villa', 'ai', 'augmented', 'wifi', 'voice_technology', 'iot', 'virtual_reality', 'wearable_technology', 'blockchain','online_reviews', 'online_channels', 'websites', 'social_networks', "mobile"]
+
+for word in test_words:
+    
+    synonyms = []
+    for syn in wordnet.synsets("%s"%word):
+        for l in syn.lemmas():
+            w = l.name()
+            w = porter.stem(w)
+            w = w.encode("ascii")
+            
+            synonyms.append(w)
+    
+    themes.append(synonyms)
+
+
+for i in range(len(test_words)):
+    w = test_words[i]
+    w = porter.stem(w)
+    w = w.encode("ascii")
+    themes[i].append(w)
+
+new_themes = []
+for lst in themes:
+    new_lst = []
+    for w in lst:
+        if w not in new_lst:
+            new_lst.append(w)
+            
+    new_themes.append(new_lst)
+
+
+new_themes[4].append('bed_breakfast')
+
+
+counters = []
+
+for data in new_data:
+    words = token.tokenize(data[5])
+    counter = {}
+    
+    for w in words:
+        if w in counter:
+            counter[w] += 1
+        else:
+            counter[w] = 1
+    
+    counters.append(counter)
+
+
+final_count = []
+
+for i in range(len(new_data)):
+    text = new_data[i][5]
+    words = token.tokenize(text)
+    
+    final_count_mini = []
+    
+    for lst in themes:
+        count_mini = 0
+        
+        for word in lst:    
+            if word in counters[i]:
+                count_mini += counters[i]["%s"%word]
+
+        final_count_mini.append(count_mini)
+    
+    final_count.append(final_count_mini)
+
+
+with open('Matrix.csv', 'w') as csvfile:
+    row = csv.writer(csvfile)
+    
+    row.writerow(['Title','apartments', 'houses', 'hotels', 'hostels', 'bed', 'homestays', 'boats', 'campsites', 'cruises', 'villa', 'ai', 'augmented', 'wifi', 'voice', 'iot', 'virtual', 'wearable', 'blockchain', 'online reviews', 'online channels', 'websites', 'social networks', "mobile"])
+    for i in range(len(new_data)):
+        row.writerow(['%s'%new_data[i][0],'%s'%final_count[i][0], '%s'%final_count[i][1], '%s'%final_count[i][2], '%s'%final_count[i][3], '%s'%final_count[i][4], '%s'%final_count[i][5], '%s'%final_count[i][6], '%s'%final_count[i][7], '%s'%final_count[i][8], '%s'%final_count[i][9], '%s'%final_count[i][10], '%s'%final_count[i][11], '%s'%final_count[i][12], '%s'%final_count[i][13], '%s'%final_count[i][14], '%s'%final_count[i][15], '%s'%final_count[i][16],'%s'%final_count[i][17],'%s'%final_count[i][18], '%s'%final_count[i][19], '%s'%final_count[i][20], '%s'%final_count[i][21],'%s'%final_count[i][22]])
